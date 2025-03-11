@@ -1,19 +1,37 @@
-import { useEffect, useState } from "react";
-import SearchBar from "./components/SearchBar";
-import TodoList from "./components/todoList";
-import TodoForm from "./components/TodoForm";
+import { useEffect, useState } from 'react';
+import { ref, set, push, onValue, remove, update } from 'firebase/database'; 
+import { database } from './firebase'; 
+import SearchBar from './components/SearchBar';
+import TodoList from './components/todoList';
+import TodoForm from './components/TodoForm';
 
 const App = () => {
-  const [todos, setTodos] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [todos, setTodos] = useState([]); // Для хранения задач
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSorted, setIsSorted] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const todosPerPage = 5;
 
+  // Загружаем данные с Firebase при монтировании компонента
   useEffect(() => {
-    fetch("https://jsonplaceholder.typicode.com/todos?_limit=10")
-      .then((response) => response.json())
-      .then((data) => setTodos(data))
-      .catch((error) => console.error("Ошибка загрузки:", error));
+    const todosRef = ref(database, 'todos');
+    const unsubscribe = onValue(todosRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const todosArray = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+  
+        setTodos(todosArray);
+      } else {
+        console.log('Нет данных');
+      }
+    });
+  
+    return () => unsubscribe();
   }, []);
+  
 
   //Фильтрация по поисковому запросу
   const filteredTodos = todos.filter((todo) =>
@@ -25,24 +43,81 @@ const App = () => {
     ? [...filteredTodos].sort((a, b) => a.title.localeCompare(b.title))
     : filteredTodos;
 
-  //Функция добавления новой задачи
+  const totalPages = Math.ceil(sortedTodos.length / todosPerPage);
+  const indexOfLastTodo = currentPage * todosPerPage;
+  const indexOfFirstTodo = indexOfLastTodo - todosPerPage;
+  const currentTodos = sortedTodos.slice(indexOfFirstTodo, indexOfLastTodo);
+
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
+
+  // Функция для добавления задачи
   const addTodo = (title) => {
     const newTodo = {
-      id: Date.now(),
       title,
       completed: false,
     };
-    setTodos([...todos, newTodo]);
+  
+    const newTodoRef = push(ref(database, 'todos'));
+    set(newTodoRef, newTodo).catch((error) => {
+      console.error('Ошибка добавления задачи:', error);
+    });
+  };
+  
+  
+
+  // Удаление задачи из Firebase
+  const deleteTodo = (id) => {
+    const todoRef = ref(database, `todos/${id}`);
+    remove(todoRef)
+      .then(() => {
+        setTodos(todos.filter((todo) => todo.id !== id));
+      })
+      .catch((error) => console.error('Ошибка удаления:', error));
   };
 
-  //Функция удаления задачи
-  const deleteTodo = (id) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+  // Обновление статуса задачи в Firebase
+  const toggleTodo = (id, completed) => {
+    const todoRef = ref(database, `todos/${id}`);
+    update(todoRef, {
+      completed: !completed,
+    })
+      .then(() => {
+        setTodos(
+          todos.map((todo) =>
+            todo.id === id ? { ...todo, completed: !completed } : todo
+          )
+        );
+      })
+      .catch((error) => console.error('Ошибка обновления:', error));
   };
+
+  const editTodo = (id, newTitle) => {
+    const todoRef = ref(database, `todos/${id}`);
+    update(todoRef, { title: newTitle })
+      .then(() => {
+        setTodos((prevTodos) =>
+          prevTodos.map((todo) =>
+            todo.id === id ? { ...todo, title: newTitle } : todo
+          )
+        );
+      })
+      .catch((error) => console.error('Ошибка редактирования:', error));
+  };
+  
 
   return (
     <div>
-      <h1>Список дел</h1>
+      <h1>📋 Мой список дел</h1>
 
       {/* Поле поиска */}
       <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
@@ -50,13 +125,31 @@ const App = () => {
       {/* Форма добавления задач */}
       <TodoForm addTodo={addTodo} />
 
-      {/* Кнопка для сортировки */}
+      {/* Кнопка сортировки */}
       <button onClick={() => setIsSorted((prev) => !prev)}>
-        {isSorted ? "Убрать сортировку" : "Сортировать по алфавиту"}
+        {isSorted ? 'Убрать сортировку' : 'Сортировать по алфавиту'}
       </button>
 
-      {/* Список дел с учетом поиска и сортировки */}
-      <TodoList todos={sortedTodos} deleteTodo={deleteTodo} />
+      {/* Список задач */}
+      <TodoList
+        todos={currentTodos}
+        deleteTodo={deleteTodo}
+        toggleTodo={toggleTodo}
+        editTodo={editTodo}
+      />
+
+      {/* Пагинация */}
+      <div>
+        <button onClick={prevPage} disabled={currentPage === 1}>
+          ⬅ Предыдущая
+        </button>
+        <span>
+          Страница {currentPage} из {totalPages}
+        </span>
+        <button onClick={nextPage} disabled={currentPage === totalPages}>
+          Следующая ➡
+        </button>
+      </div>
     </div>
   );
 };

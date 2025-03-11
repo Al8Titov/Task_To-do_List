@@ -1,22 +1,30 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
 import debounce from "lodash.debounce";
 
 const SearchBar = ({ searchQuery, setSearchQuery }) => {
   const [localQuery, setLocalQuery] = useState(searchQuery);
 
+  const debouncedSetSearchQuery = useCallback(
+    debounce((query) => setSearchQuery(query), 500),
+    [setSearchQuery] 
+  );
+
   useEffect(() => {
-    const debouncedSearch = debounce(() => setSearchQuery(localQuery), 500);
-    debouncedSearch();
-    return () => debouncedSearch.cancel();
-  }, [localQuery, setSearchQuery]);
+    debouncedSetSearchQuery(localQuery);
+    return () => debouncedSetSearchQuery.cancel();
+  }, [localQuery, debouncedSetSearchQuery]);
+
+  const handleChange = (e) => {
+    setLocalQuery(e.target.value);
+  };
 
   return (
     <div>
       <input
         type="text"
         value={localQuery}
-        onChange={(e) => setLocalQuery(e.target.value)}
+        onChange={handleChange}
         placeholder="Поиск по делам..."
       />
     </div>
