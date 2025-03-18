@@ -1,34 +1,28 @@
-import PropTypes from "prop-types";
-import TodoItem from "./TodoItem";
-import styles from "./TodoList.module.css";
+import  { useEffect, useState } from "react";
+import axios from "axios";
 
-const TodoList = ({ todos, deleteTodo, toggleTodo, editTodo }) => {
+const TodoList = () => {
+  const [todos, setTodos] = useState([]);
+
+  useEffect(() => {
+    axios
+      .get("https://jsonplaceholder.typicode.com/todos?_limit=10")
+      .then((response) => {
+        setTodos(response.data);
+      })
+      .catch((error) => console.error("Ошибка загрузки данных:", error));
+  }, []);
+
   return (
-    <div className={styles["app-container"]}>
-      {todos.length === 0 ? (
-        <div className={styles.loader}>Задач нет</div>
-      ) : (
-        <ul className={styles["todo-list"]}>
-          {todos.map((todo) => (
-            <TodoItem
-              key={todo.id}
-              todo={todo}
-              deleteTodo={deleteTodo}
-              toggleTodo={toggleTodo}
-              editTodo={editTodo}
-            />
-          ))}
-        </ul>
-      )}
+    <div>
+      <h2>Список дел</h2>
+      <ul>
+        {todos.map((todo) => (
+          <li key={todo.id}>{todo.title}</li>
+        ))}
+      </ul>
     </div>
   );
-};
-
-TodoList.propTypes = {
-  todos: PropTypes.array.isRequired,
-  deleteTodo: PropTypes.func.isRequired,
-  toggleTodo: PropTypes.func.isRequired,
-  editTodo: PropTypes.func.isRequired,
 };
 
 export default TodoList;
