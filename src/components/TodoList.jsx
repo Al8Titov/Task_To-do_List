@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import  { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import debounce from "lodash/debounce";
+import styles from "./TodoList.module.css";
 
 const API_URL = "http://localhost:5000/todos";
 
@@ -10,7 +11,6 @@ const TodoList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSorted, setIsSorted] = useState(false);
 
-  // Получаем список задач
   useEffect(() => {
     fetchTodos();
   }, []);
@@ -20,7 +20,6 @@ const TodoList = () => {
     setTodos(response.data);
   };
 
-  // Добавление новой задачи
   const addTodo = () => {
     if (!newTodo.trim()) return;
 
@@ -32,14 +31,12 @@ const TodoList = () => {
     });
   };
 
-  // Удаление задачи
   const deleteTodo = (id) => {
     axios.delete(`${API_URL}/${id}`).then(() => {
       setTodos(todos.filter((todo) => todo.id !== id));
     });
   };
 
-  // Обработчик поиска (с `debounce`)
   const handleSearch = useCallback(
     debounce((query) => {
       setSearchQuery(query);
@@ -47,29 +44,27 @@ const TodoList = () => {
     []
   );
 
-  // Фильтрация задач по поисковому запросу
   const filteredTodos = todos.filter((todo) =>
     todo.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Сортировка по алфавиту
   const sortedTodos = isSorted
     ? [...filteredTodos].sort((a, b) => a.title.localeCompare(b.title))
     : filteredTodos;
 
   return (
-    <div>
+    <div className={styles.container}>
       <h2>Список дел</h2>
 
-      <input
-        type="text"
-        placeholder="Добавить задачу..."
-        value={newTodo}
-        onChange={(e) => setNewTodo(e.target.value)}
-      />
-      <button onClick={addTodo}>Добавить</button>
-
-      <br />
+      <div className={styles.inputGroup}>
+        <input
+          type="text"
+          placeholder="Добавить задачу..."
+          value={newTodo}
+          onChange={(e) => setNewTodo(e.target.value)}
+        />
+        <button onClick={addTodo}>Добавить</button>
+      </div>
 
       <input
         type="text"
@@ -77,7 +72,7 @@ const TodoList = () => {
         onChange={(e) => handleSearch(e.target.value)}
       />
 
-      <button onClick={() => setIsSorted(!isSorted)}>
+      <button className={styles.sortButton} onClick={() => setIsSorted(!isSorted)}>
         {isSorted ? "Обычный порядок" : "Сортировать A-Z"}
       </button>
 
@@ -85,7 +80,9 @@ const TodoList = () => {
         {sortedTodos.map((todo) => (
           <li key={todo.id}>
             {todo.title}
-            <button onClick={() => deleteTodo(todo.id)}>Удалить</button>
+            <button className={styles.deleteBtn} onClick={() => deleteTodo(todo.id)}>
+              Удалить
+            </button>
           </li>
         ))}
       </ul>
