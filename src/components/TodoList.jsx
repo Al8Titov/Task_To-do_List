@@ -1,4 +1,5 @@
-import  { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import debounce from "lodash/debounce";
 import styles from "./TodoList.module.css";
@@ -28,12 +29,6 @@ const TodoList = () => {
     axios.post(API_URL, newTask).then((response) => {
       setTodos([...todos, response.data]);
       setNewTodo("");
-    });
-  };
-
-  const deleteTodo = (id) => {
-    axios.delete(`${API_URL}/${id}`).then(() => {
-      setTodos(todos.filter((todo) => todo.id !== id));
     });
   };
 
@@ -73,16 +68,15 @@ const TodoList = () => {
       />
 
       <button className={styles.sortButton} onClick={() => setIsSorted(!isSorted)}>
-        {isSorted ? "Обычный порядок" : "Сортировать A-Z"}
+        {isSorted ? "Отключить сортировку" : "Сортировать A-Z"}
       </button>
 
-      <ul>
+      <ul className={styles.todoList}>
         {sortedTodos.map((todo) => (
-          <li key={todo.id}>
-            {todo.title}
-            <button className={styles.deleteBtn} onClick={() => deleteTodo(todo.id)}>
-              Удалить
-            </button>
+          <li key={todo.id} className={styles.todoItem}>
+            <Link to={`/task/${todo.id}`} className={styles.todoLink}>
+              {todo.title.length > 30 ? `${todo.title.slice(0, 30)}...` : todo.title}
+            </Link>
           </li>
         ))}
       </ul>
