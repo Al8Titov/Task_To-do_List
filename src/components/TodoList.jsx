@@ -1,56 +1,15 @@
-import  { useEffect, useState, useCallback } from "react";
-import axios from "axios";
-import debounce from "lodash/debounce";
+import { useState } from "react";
+import { useTodos } from "../context/TodoContext";
 import styles from "./TodoList.module.css";
 
-const API_URL = "http://localhost:5000/todos";
-
 const TodoList = () => {
-  const [todos, setTodos] = useState([]);
+  const { todos, addTodo, deleteTodo, handleSearch, toggleSort, isSorted } = useTodos();
   const [newTodo, setNewTodo] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSorted, setIsSorted] = useState(false);
 
-  useEffect(() => {
-    fetchTodos();
-  }, []);
-
-  const fetchTodos = async () => {
-    const response = await axios.get(API_URL);
-    setTodos(response.data);
+  const handleAdd = () => {
+    addTodo(newTodo);
+    setNewTodo("");
   };
-
-  const addTodo = () => {
-    if (!newTodo.trim()) return;
-
-    const newTask = { title: newTodo };
-
-    axios.post(API_URL, newTask).then((response) => {
-      setTodos([...todos, response.data]);
-      setNewTodo("");
-    });
-  };
-
-  const deleteTodo = (id) => {
-    axios.delete(`${API_URL}/${id}`).then(() => {
-      setTodos(todos.filter((todo) => todo.id !== id));
-    });
-  };
-
-  const handleSearch = useCallback(
-    debounce((query) => {
-      setSearchQuery(query);
-    }, 500),
-    []
-  );
-
-  const filteredTodos = todos.filter((todo) =>
-    todo.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const sortedTodos = isSorted
-    ? [...filteredTodos].sort((a, b) => a.title.localeCompare(b.title))
-    : filteredTodos;
 
   return (
     <div className={styles.container}>
@@ -63,7 +22,7 @@ const TodoList = () => {
           value={newTodo}
           onChange={(e) => setNewTodo(e.target.value)}
         />
-        <button onClick={addTodo}>Добавить</button>
+        <button onClick={handleAdd}>Добавить</button>
       </div>
 
       <input
@@ -72,12 +31,12 @@ const TodoList = () => {
         onChange={(e) => handleSearch(e.target.value)}
       />
 
-      <button className={styles.sortButton} onClick={() => setIsSorted(!isSorted)}>
+      <button className={styles.sortButton} onClick={toggleSort}>
         {isSorted ? "Обычный порядок" : "Сортировать A-Z"}
       </button>
 
       <ul>
-        {sortedTodos.map((todo) => (
+        {todos.map((todo) => (
           <li key={todo.id}>
             {todo.title}
             <button className={styles.deleteBtn} onClick={() => deleteTodo(todo.id)}>
